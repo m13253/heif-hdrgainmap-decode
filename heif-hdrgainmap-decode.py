@@ -55,6 +55,7 @@ def main(argv: typing.List[str]) -> None:
         print('The output is an scRGB (gamma 1.0) encoded OpenEXR file.')
         print('You need to use an HDR tone-mapping software to edit it before sharing.')
         return
+
     print(f'Read image: {argv[1]}')
     input = oiio.ImageBuf(argv[1])
     print(f'Read gainmap: {argv[2]}')
