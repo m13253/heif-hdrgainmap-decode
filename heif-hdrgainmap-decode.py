@@ -60,7 +60,7 @@ def main(argv: typing.List[str]) -> None:
     input = oiio.ImageBuf(argv[1])
     print(f'Read gainmap: {argv[2]}')
     gainmap = oiio.ImageBuf(argv[2])
-    print('Converting')
+    print('Converting...')
 
     # Resize gainmap to match image size using bilinear interpolation.
     input_roi = input.roi
@@ -110,7 +110,7 @@ def main(argv: typing.List[str]) -> None:
     del output_buf
 
     # Write output image.
-    print(f'Write output: {argv[3]}')
+    print(f'Write image: {argv[3]}')
     output.write(argv[3], dtype=oiio.FLOAT)
 
 
