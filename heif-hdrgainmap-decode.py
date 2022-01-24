@@ -81,8 +81,8 @@ def main(argv: typing.List[str]) -> None:
     # But I guess Apple engineers themselves aren't sure either,
     # since the same image renders differently on iPhone and macOS Photos.app.
     #
-    # But why 12? It looks good and it's the same number as HLG (ARIB STD-B67).
-    output_buf = input_buf * 12**gainmap_buf
+    # But why 7.5? It looks good and it's the same number as scRGB.
+    output_buf = input_buf * 7.5**gainmap_buf
     del input_buf
     del gainmap_buf
 
