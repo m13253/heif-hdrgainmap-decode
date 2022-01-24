@@ -79,5 +79,8 @@ how the image is rendered on iPhone.
 The program is licensed under the GPLv3 (or later) license.
 However, my algorithm can be freely used as long as you rewrite the code.
 
-Please make sure to declare that **the algorithm is only a rough guess** when
-you distribute or derive this algorithm.
+## Disclaimer
+
+Please make sure to declare that **the algorithm is only a rough guess**
+whenever you distribute or derive this algorithm. This is to prevent misleading
+anyone that wants to study or improve the algorithm.
