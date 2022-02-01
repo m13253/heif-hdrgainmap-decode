@@ -32,15 +32,25 @@ except ImportError:
     sys.exit(1)
 
 
-def scRGB_eotf(buf: np.ndarray) -> np.ndarray:
+def scRGB_EOTF(buf: np.ndarray) -> np.ndarray:
     buf_abs = np.abs(buf)
     return np.where(buf_abs <= 0.04045, buf_abs / 12.92, ((buf_abs + 0.055) / 1.055)**2.4) * np.sign(buf)
+
+
+def PQ_OETF(buf: np.ndarray) -> np.ndarray:
+    m1 = 2610 / 16384
+    m2 = 2523 / 4096 * 128
+    c1 = 3424 / 4096
+    c2 = 2413 / 4096 * 32
+    c3 = 2392 / 4096 * 32
+    Y = np.abs(buf) / 10000
+    return ((c1 + c2 * Y**m1) / (1 + c3 * Y**m1))**m2 * np.sign(buf)
 
 
 def main(argv: typing.List[str]) -> None:
     if len(argv) != 4:
         print('Convert HDR photos taken by iPhone 12 (or later) to regular HDR images.')
-        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <output.exr>')
+        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <output.png>')
         print()
         print('To obtain the HDR gain map:')
         print('  % brew install libheif')
@@ -52,8 +62,13 @@ def main(argv: typing.List[str]) -> None:
         print('  * IMG_0000-urn:com:apple:photo:2020:aux:hdrgainmap.png:')
         print('      This is the HDR gain map.')
         print()
-        print('The output is an scRGB (gamma 1.0) encoded OpenEXR file.')
-        print('You need to use an HDR tone-mapping software to edit it before sharing.')
+        print('The output is a BT.2020 (PQ) encoded PNG-48 file.')
+        print('If you plan to encode it back to HEIC, use "nclx" metadata:')
+        print('  color_primaries: 9, transfer_characteristics: 16,')
+        print('  matrix_coefficients: 9, full_range_flag: 1.')
+        print('Warning:')
+        print('  Libheif currently has issues creating "nclx" metadata.')
+        print('  Most Apple software have trouble displaying HDR HEIC images as of now.')
         return
 
     print(f'Read image: {argv[1]}')
@@ -69,7 +84,7 @@ def main(argv: typing.List[str]) -> None:
     # Display P3 uses same EOTF as scRGB
     input_buf = input.get_pixels()
     del input
-    input_buf = scRGB_eotf(input_buf)
+    input_buf = scRGB_EOTF(input_buf)
 
     # I don't know if the gainmap is in linear or gamma space. We assume it's linear.
     gainmap_buf = gainmap.get_pixels()
@@ -86,25 +101,28 @@ def main(argv: typing.List[str]) -> None:
     del input_buf
     del gainmap_buf
 
-    # Convert Display P3 to scRGB, gamma 1.0.
+    # Convert Display P3 to BT.2020, gamma 1.0.
     # Computed using https://github.com/m13253/colorspace-routines
-    DisplayP3_to_scRGB = np.array([
-        [1.22494018, -0.224940176, 0],
-        [-0.042056955, 1.04205695, 0],
-        [-0.019637555, -0.078636046, 1.09827360],
+    DisplayP3_to_BT2020 = np.array([
+        [0.753833034, 0.198597369, 0.0475695966],
+        [0.0457438490, 0.941777220, 0.0124789312],
+        [-0.00121034035, 0.0176017173, 0.983608623],
     ], dtype=np.float32)
-    output_buf = np.tensordot(DisplayP3_to_scRGB, output_buf, axes=((1, ), (2, ))).transpose(1, 2, 0)
+    output_buf = np.tensordot(DisplayP3_to_BT2020, output_buf, axes=((1, ), (2, ))).transpose(1, 2, 0)
     output_buf = np.ascontiguousarray(output_buf)
 
-    output_spec = oiio.ImageSpec(input_roi.width, input_roi.height, 3, oiio.FLOAT)
-    output_spec.attribute("oiio:ColorSpace", "Linear")
+    # Apply PQ OETF
+    output_buf = PQ_OETF(output_buf * 80)
+
+    # Create output buffer.
+    output_spec = oiio.ImageSpec(input_roi.width, input_roi.height, 3, oiio.UINT16)
     output = oiio.ImageBuf(output_spec)
     assert output.set_pixels(output.roi, output_buf)
     del output_buf
 
     # Write output image.
     print(f'Write image: {argv[3]}')
-    output.write(argv[3], dtype=oiio.FLOAT)
+    output.write(argv[3], dtype=oiio.UINT16)
 
 
 if __name__ == '__main__':

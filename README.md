@@ -42,7 +42,7 @@ brew install python libheif numpy openimageio
 3. Run the following command to convert the photo to regular HDR image:
 
    ```bash
-   ./heif-hdrgainmap-decode.py IMG_0000.heic IMG_0000-urn:com:apple:photo:2020:aux:hdrgainmap.png IMG_0000.exr
+   ./heif-hdrgainmap-decode.py IMG_0000.heic IMG_0000-urn:com:apple:photo:2020:aux:hdrgainmap.png IMG_0000_HDR.png
    ```
 
 4. Remove the temporary files.
@@ -51,9 +51,18 @@ brew install python libheif numpy openimageio
    rm -fv IMG_0000.png IMG_0000-*.png
    ```
 
-5. The output is an scRGB (gamma 1.0) encoded OpenEXR file.
+5. The output is a BT.2020 (PQ) encoded PNG-48 file.
 
-   You need to use an HDR tone-mapping software to edit it before sharing.
+   If you plan to encode it back to HEIC, use "nclx" metadata:
+
+   color_primaries: 9, transfer_characteristics: 16,
+   matrix_coefficients: 9, full_range_flag: 1.
+
+   Warning:
+
+   Libheif currently has issues creating "nclx" metadata.
+
+   Most Apple software have trouble displaying HDR HEIC images as of now.
 
 ## Technical details
 
