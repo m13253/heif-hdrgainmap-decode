@@ -32,7 +32,7 @@ except ImportError:
     sys.exit(1)
 
 
-def scRGB_eotf(buf: np.ndarray) -> np.ndarray:
+def scRGB_EOTF(buf: np.ndarray) -> np.ndarray:
     buf_abs = np.abs(buf)
     return np.where(buf_abs <= 0.04045, buf_abs / 12.92, ((buf_abs + 0.055) / 1.055)**2.4) * np.sign(buf)
 
@@ -69,7 +69,7 @@ def main(argv: typing.List[str]) -> None:
     # Display P3 uses same EOTF as scRGB
     input_buf = input.get_pixels()
     del input
-    input_buf = scRGB_eotf(input_buf)
+    input_buf = scRGB_EOTF(input_buf)
 
     # I don't know if the gainmap is in linear or gamma space. We assume it's linear.
     gainmap_buf = gainmap.get_pixels()
