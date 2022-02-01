@@ -81,24 +81,17 @@ def main(argv: typing.List[str]) -> None:
     # But I guess Apple engineers themselves aren't sure either,
     # since the same image renders differently on iPhone and macOS Photos.app.
     #
-    # But why 7.5? It looks good and it's the same number as scRGB.
-    output_buf = input_buf * 7.5**gainmap_buf
+    # But why 8.0? It looks good and it's the same number as scRGB.
+    output_buf = input_buf * 8**gainmap_buf
     del input_buf
     del gainmap_buf
 
     # Convert Display P3 to scRGB, gamma 1.0.
-    #
-    # The algorithm to compute this matrix is from:
-    #   http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-    #
-    # The primary chromaticities are from:
-    #   https://www.color.org/chardata/rgb/DCIP3.xalter
-    #
-    # Both white points are D65, so we don't need to do chromatic adaptation.
+    # Computed using https://github.com/m13253/colorspace-routines
     DisplayP3_to_scRGB = np.array([
-        [1.2249402, -0.22494018, -2.2841395e-16],
-        [-0.042056955, 1.0420569, 2.563119e-17],
-        [-0.019637555, -0.07863604, 1.0982736],
+        [1.22494018, -0.224940176, 0],
+        [-0.042056955, 1.04205695, 0],
+        [-0.019637555, -0.078636046, 1.09827360],
     ], dtype=np.float32)
     output_buf = np.tensordot(DisplayP3_to_scRGB, output_buf, axes=((1, ), (2, ))).transpose(1, 2, 0)
     output_buf = np.ascontiguousarray(output_buf)

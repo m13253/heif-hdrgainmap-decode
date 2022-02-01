@@ -71,7 +71,7 @@ with “a constant raised to the power of the gain value”. If the gain value i
 0.0, the image is unchanged. If the gain value is 1.0 (actually 255),
 the luminance is multiplied by that constant.
 
-I choose the constant to be 7.5 because it looks good, and it matches scRGB.
+I choose the constant to be 8.0 because it looks good, and it matches scRGB.
 
 ## License
 
