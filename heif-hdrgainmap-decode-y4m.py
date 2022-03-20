@@ -48,9 +48,9 @@ def PQ_OETF(buf: np.ndarray) -> np.ndarray:
 
 
 def main(argv: typing.List[str]) -> None:
-    if len(argv) != 5:
+    if len(argv) not in (4, 5):
         print('Convert HDR photos taken by iPhone 12 (or later) to regular HDR images.')
-        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <Reference White in cd/m\xb2> <output.y4m>')
+        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <output.y4m> <Reference White, default to 100 cd/m\xb2>')
         print()
         print('To obtain the HDR gain map:')
         print('  % brew install libheif')
@@ -83,7 +83,11 @@ def main(argv: typing.List[str]) -> None:
     input = oiio.ImageBuf(argv[1])
     print(f'Read gainmap: {argv[2]}')
     gainmap = oiio.ImageBuf(argv[2])
-    reference_white = float(argv[3])
+    # There are different reference white standards,
+    # including 80 cd/m², 100 cd/m², 120 cd/m², 203 cd/m².
+    # Let's set the default value to be 100 cd/m²,
+    # which matches BT.709 and the AVIF decoder in Google Chrome.
+    reference_white = float(argv[4]) if len(argv) > 4 else 100.0
     print('Reference white: {:.2f} cd/m\xb2'.format(reference_white))
     print('Converting...')
 
@@ -158,8 +162,8 @@ def main(argv: typing.List[str]) -> None:
     del output_buf
 
     # Write output image.
-    print(f'Write image: {argv[4]}')
-    with open(argv[4], 'wb') as f:
+    print(f'Write image: {argv[3]}')
+    with open(argv[3], 'wb') as f:
         f.write(f'YUV4MPEG2 W{output_planar.shape[2]} H{output_planar.shape[1]} F1:1 Ip A1:1 C444p12 XYSCSS=444P12 XCOLORRANGE=LIMITED\nFRAME\n'.encode('utf-8', 'replace'))
         f.write(output_planar.tobytes('C'))
 
