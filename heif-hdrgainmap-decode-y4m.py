@@ -48,9 +48,9 @@ def PQ_OETF(buf: np.ndarray) -> np.ndarray:
 
 
 def main(argv: typing.List[str]) -> None:
-    if len(argv) != 4:
+    if len(argv) != 5:
         print('Convert HDR photos taken by iPhone 12 (or later) to regular HDR images.')
-        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <output.y4m>')
+        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <Reference White in cd/m\xb2> <output.y4m>')
         print()
         print('To obtain the HDR gain map:')
         print('  % brew install libheif')
@@ -79,10 +79,12 @@ def main(argv: typing.List[str]) -> None:
         print('    -movflags +faststart IMG_0000.mp4')
         return
 
-    print(f'Read image: {argv[1]}')
+    print(f'Read image:   {argv[1]}')
     input = oiio.ImageBuf(argv[1])
     print(f'Read gainmap: {argv[2]}')
     gainmap = oiio.ImageBuf(argv[2])
+    reference_white = float(argv[3])
+    print('Reference white: {:.2f} cd/m\xb2'.format(reference_white))
     print('Converting...')
 
     # Resize gainmap to match image size using bilinear interpolation.
@@ -109,6 +111,15 @@ def main(argv: typing.List[str]) -> None:
     del input_buf
     del gainmap_buf
 
+    # Convert Display P3 to CIEXYZ, using Y for luminance.
+    DisplayP3_to_Y = np.array([0.22897456, 0.69173852, 0.07928691], dtype=np.float32)
+    output_Y = output_buf.dot(DisplayP3_to_Y)
+    output_Y_max = output_Y.max() * reference_white
+    output_Y_avg = output_Y.mean() * reference_white
+    del output_Y
+    print('MaxFALL: {:.2f} cd/m\xb2'.format(output_Y_avg))
+    print('MaxCLL:  {:.2f} cd/m\xb2'.format(output_Y_max))
+
     # Convert Display P3 to BT.2020.
     # Computed using https://github.com/m13253/colorspace-routines
     DisplayP3_to_BT2020 = np.array([
@@ -118,30 +129,17 @@ def main(argv: typing.List[str]) -> None:
     ], dtype=np.float32)
     output_buf = np.tensordot(DisplayP3_to_BT2020, output_buf, axes=((1, ), (2, ))).transpose(1, 2, 0)
     output_buf = np.ascontiguousarray(output_buf)
-
-    # macOS maps display-referenced signal at 100 cd/m^2 to the diffuse white the user sets to.
-    # This value is consistent with BT.709.
-    # Therefore, if we map out scene-referenced signal to 100 cd/m^2 PQ code value,
-    # the output video will look consistent with the still image.
-    #
-    # However, Windows maps SDR brightness to either 80 cd/m^2 or 120 cd/m^2 by default,
-    # but HDR contents will be shown at display-referenced luminance directly.
-    # If the user uses a monitor that disables the brightness knob in HDR mode,
-    # then we have to say good luck to that user.
-    #
-    # But we won't care about Windows HDR, shall we?
-    # Microsoft didn't even teach their engineers proper color science first,
-    # before they are allowed to develop HDR features for Windows 11.
-    output_buf = PQ_OETF(output_buf * 100)
+    output_buf *= reference_white
+    output_buf = PQ_OETF(output_buf)
 
     # Non-Constant Luminance Y'Cb'Cr' signal format
     # ITU-R BT.2100, Table 6
-    RGB_to_YCbCr = np.array([
+    BT2020_RGB_to_YCbCr = np.array([
         [0.2627, 0.6780, 0.0593],
         [-0.2627 / 1.8814, -0.6780 / 1.8804, 0.5],
         [0.5, -0.6780 / 1.4746, -0.0593 / 1.4746],
     ], dtype=np.float32)
-    output_buf = np.tensordot(RGB_to_YCbCr, output_buf, axes=((1, ), (2, ))).transpose(1, 2, 0)
+    output_buf = np.tensordot(BT2020_RGB_to_YCbCr, output_buf, axes=((1, ), (2, ))).transpose(1, 2, 0)
     output_buf = np.ascontiguousarray(output_buf)
 
     # Convert to 12-bit representation.
@@ -160,9 +158,9 @@ def main(argv: typing.List[str]) -> None:
     del output_buf
 
     # Write output image.
-    print(f'Write image: {argv[3]}')
-    with open(argv[3], 'wb') as f:
-        f.write('YUV4MPEG2 W{} H{} F1:1 Ip A1:1 C444p12 XYSCSS=444P12 XCOLORRANGE=LIMITED\nFRAME\n'.format(output_planar.shape[2], output_planar.shape[1]).encode('utf-8', 'replace'))
+    print(f'Write image: {argv[4]}')
+    with open(argv[4], 'wb') as f:
+        f.write(f'YUV4MPEG2 W{output_planar.shape[2]} H{output_planar.shape[1]} F1:1 Ip A1:1 C444p12 XYSCSS=444P12 XCOLORRANGE=LIMITED\nFRAME\n'.encode('utf-8', 'replace'))
         f.write(output_planar.tobytes('C'))
 
 

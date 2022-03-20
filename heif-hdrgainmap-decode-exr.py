@@ -56,7 +56,7 @@ def main(argv: typing.List[str]) -> None:
         print('You need to use an HDR tone-mapping software to edit it before sharing.')
         return
 
-    print(f'Read image: {argv[1]}')
+    print(f'Read image:   {argv[1]}')
     input = oiio.ImageBuf(argv[1])
     print(f'Read gainmap: {argv[2]}')
     gainmap = oiio.ImageBuf(argv[2])
@@ -85,6 +85,15 @@ def main(argv: typing.List[str]) -> None:
     output_buf = input_buf * 8**gainmap_buf
     del input_buf
     del gainmap_buf
+
+    # Convert Display P3 to CIEXYZ, using Y for luminance.
+    DisplayP3_to_Y = np.array([0.22897456, 0.69173852, 0.07928691], dtype=np.float32)
+    output_Y = output_buf.dot(DisplayP3_to_Y)
+    output_Y_max = output_Y.max()
+    output_Y_avg = output_Y.mean()
+    del output_Y
+    print('MaxFALL: {:.2f} (scene referenced)'.format(output_Y_avg))
+    print('MaxCLL:  {:.2f} (scene referenced)'.format(output_Y_max))
 
     # Convert Display P3 to scRGB, gamma 1.0.
     # Computed using https://github.com/m13253/colorspace-routines
