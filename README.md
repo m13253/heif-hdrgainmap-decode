@@ -42,7 +42,7 @@ brew install python libheif numpy openimageio
 3. Run the following command to convert the photo to regular HDR image:
 
    ```bash
-   ./heif-hdrgainmap-decode.py IMG_0000.heic IMG_0000-urn:com:apple:photo:2020:aux:hdrgainmap.png IMG_0000.exr
+   ./heif-hdrgainmap-decode-exr.py IMG_0000.heic IMG_0000-urn:com:apple:photo:2020:aux:hdrgainmap.png IMG_0000.exr
    ```
 
 4. Remove the temporary files.
