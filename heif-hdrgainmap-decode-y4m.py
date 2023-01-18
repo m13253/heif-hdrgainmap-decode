@@ -50,7 +50,7 @@ def PQ_OETF(buf: np.ndarray) -> np.ndarray:
 def main(argv: typing.List[str]) -> None:
     if len(argv) not in (4, 5):
         print('Convert HDR photos taken by iPhone 12 (or later) to regular HDR images.')
-        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <output.y4m> <Reference White, default to 100 cd/m\xb2>')
+        print('Usage: heif-gainmap-decode-y4m.py <input.heic> <hdrgainmap.png> <output.y4m> <Reference White, default to 100 cd/m\xb2>')
         print()
         print('To obtain the HDR gain map:')
         print('  % brew install libheif')
@@ -69,9 +69,10 @@ def main(argv: typing.List[str]) -> None:
         print('  Transfer function: (16) SMPTE ST 2084')
         print('  Color matrix:      (9) BT.2020 Non-constant Luminance')
         print()
-        print('You can further convert it into an HEIF/AVIF file:')
+        print('You can further convert it into a 12-bit HEIF/AVIF file:')
         print('  % avifenc --cicp 9/16/9 --min 1 --max 12 IMG_0000.y4m IMG_0000.avif')
-        print('or an HEVC video:')
+        print('  (Note: some decoders can\'t decode 12-bit files.)')
+        print('or a 10-bit HEVC video:')
         print('  % ffmpeg -color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc \\')
         print('    -i IMG_0000.y4m -vf tpad=stop_mode=clone:stop_duration=10 \\')
         print('    -pix_fmt yuv420p10le -c:v libx265 -tag:v hvc1 -crf:v 22 \\')
@@ -81,8 +82,12 @@ def main(argv: typing.List[str]) -> None:
 
     print(f'Read image:   {argv[1]}')
     input = oiio.ImageBuf(argv[1])
+    if not input.read():
+        raise RuntimeError('Failed to open {}: {}'.format(argv[1], oiio.geterror()))
     print(f'Read gainmap: {argv[2]}')
     gainmap = oiio.ImageBuf(argv[2])
+    if not gainmap.read():
+        raise RuntimeError('Failed to open {}: {}'.format(argv[2], oiio.geterror()))
     # There are different reference white standards,
     # including 80 cd/m², 100 cd/m², 120 cd/m², 203 cd/m².
     # Let's set the default value to be 100 cd/m²,

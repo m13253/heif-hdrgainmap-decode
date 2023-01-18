@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import base64
 import sys
 import typing
 try:
@@ -40,7 +41,7 @@ def scRGB_EOTF(buf: np.ndarray) -> np.ndarray:
 def main(argv: typing.List[str]) -> None:
     if len(argv) != 4:
         print('Convert HDR photos taken by iPhone 12 (or later) to regular HDR images.')
-        print('Usage: heif-gainmap-decode.py <input.heic> <hdrgainmap.png> <output.exr>')
+        print('Usage: heif-gainmap-decode-scrgb.py <input.heic> <hdrgainmap.png> <output.exr>')
         print()
         print('To obtain the HDR gain map:')
         print('  % brew install libheif')
@@ -58,8 +59,12 @@ def main(argv: typing.List[str]) -> None:
 
     print(f'Read image:   {argv[1]}')
     input = oiio.ImageBuf(argv[1])
+    if not input.read():
+        raise RuntimeError('Failed to open {}: {}'.format(argv[1], oiio.geterror()))
     print(f'Read gainmap: {argv[2]}')
     gainmap = oiio.ImageBuf(argv[2])
+    if not gainmap.read():
+        raise RuntimeError('Failed to open {}: {}'.format(argv[2], oiio.geterror()))
     print('Converting...')
 
     # Resize gainmap to match image size using bilinear interpolation.
@@ -106,14 +111,52 @@ def main(argv: typing.List[str]) -> None:
     output_buf = np.ascontiguousarray(output_buf)
 
     output_spec = oiio.ImageSpec(input_roi.width, input_roi.height, 3, oiio.FLOAT)
-    output_spec.attribute("oiio:ColorSpace", "Linear")
+    # TIFF uses the "ICCProfile" tag, but OpenEXR does not.
+    output_spec.attribute('ICCProfile', 'uint8[1384]', np.asarray(bytearray(base64.b64decode(
+        # ACES-elle-V2-g10.icc from https://github.com/ellelstone/elles_icc_profiles
+        # Licensed under CC-BY-SA 3.0.
+        'AAAFaGxjbXMCIAAAbW50clJHQiBYWVogB+AABAAWABUADQAiYWNzcCpuaXgAAAAAAAAAAA'
+        'AAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALY3BydAAAAQgAAACWd3RwdAAAAaAAAAAUYm'
+        'twdAAAAbQAAAAUclhZWgAAAcgAAAAUZ1hZWgAAAdwAAAAUYlhZWgAAAfAAAAAUclRSQwAA'
+        'AgQAAAAOZ1RSQwAAAhQAAAAOYlRSQwAAAiQAAAAOZG1uZAAAAjQAAAKQZGVzYwAABMQAAA'
+        'CkdGV4dAAAAABDb3B5cmlnaHQgMjAxNiwgRWxsZSBTdG9uZSAoaHR0cDovL25pbmVkZWdy'
+        'ZWVzYmVsb3cuY29tLyksIENDLUJZLVNBIDMuMCBVbnBvcnRlZCAoaHR0cHM6Ly9jcmVhdG'
+        'l2ZWNvbW1vbnMub3JnL2xpY2Vuc2VzL2J5LXNhLzMuMC9sZWdhbGNvZGUpLgAAAABYWVog'
+        'AAAAAAAA81EAAQAAAAEWzFhZWiAAAAAAAAAAAAAAAAAAAAAAWFlaIAAAAAAAAG+gAAA49Q'
+        'AAA5BYWVogAAAAAAAAYpcAALeHAAAY2VhZWiAAAAAAAAAknwAAD4QAALbEY3VydgAAAAAA'
+        'AAABAQAAAGN1cnYAAAAAAAAAAQEAAABjdXJ2AAAAAAAAAAEBAAAAZGVzYwAAAAAAAAC8c1'
+        'JHQiBjaHJvbWF0aWNpdGllcyBmcm9tIEEgU3RhbmRhcmQgRGVmYXVsdCBDb2xvciBTcGFj'
+        'ZSBmb3IgdGhlIEludGVybmV0IC0gc1JHQiwgaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3'
+        'MvQ29sb3Ivc1JHQjsgYWxzbyBzZWUgaHR0cDovL3d3dy5jb2xvci5vcmcvc3BlY2lmaWNh'
+        'dGlvbi9JQ0MxdjQzXzIwMTAtMTIucGRmAAAAAAAAAAAAAAAAvQBzAFIARwBCACAAYwBoAH'
+        'IAbwBtAGEAdABpAGMAaQB0AGkAZQBzACAAZgByAG8AbQAgAEEAIABTAHQAYQBuAGQAYQBy'
+        'AGQAIABEAGUAZgBhAHUAbAB0ACAAQwBvAGwAbwByACAAUwBwAGEAYwBlACAAZgBvAHIAIA'
+        'B0AGgAZQAgAEkAbgB0AGUAcgBuAGUAdAAgAC0AIABzAFIARwBCACwAIABoAHQAdABwADoA'
+        'LwAvAHcAdwB3AC4AdwAzAC4AbwByAGcALwBHAHIAYQBwAGgAaQBjAHMALwBDAG8AbABvAH'
+        'IALwBzAFIARwBCADsAIABhAGwAcwBvACAAcwBlAGUAIABoAHQAdABwADoALwAvAHcAdwB3'
+        'AC4AYwBvAGwAbwByAC4AbwByAGcALwBzAHAAZQBjAGkAZgBpAGMAYQB0AGkAbwBuAC8ASQ'
+        'BDAEMAMQB2ADQAMwBfADIAMAAxADAALQAxADIALgBwAGQAZgAAAAAAAAAAAAAAAAAAAAAA'
+        'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        'AAAAAAAAAAAAAAAABkZXNjAAAAAAAAABhzUkdCLWVsbGUtVjItZzEwLmljYwAAAAAAAAAA'
+        'AAAAGQBzAFIARwBCAC0AZQBsAGwAZQAtAFYAMgAtAGcAMQAwAC4AaQBjAGMAAAAAAAAAAA'
+        'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        'AAAAAAAAAAAAAAAAAAAAAAAAAA=='
+    )), dtype=np.uint8))
+    # OpenEXR uses the "chromaticities" tag.
+    output_spec.attribute('chromaticities', 'float[8]', (
+        # https://www.color.org/chardata/rgb/sRGB.xalter
+        0.64, 0.33, 0.30, 0.60, 0.15, 0.06, 0.3127, 0.3290,
+    ))
+    output_spec.attribute('oiio:ColorSpace', 'Linear')
     output = oiio.ImageBuf(output_spec)
     assert output.set_pixels(output.roi, output_buf)
     del output_buf
 
     # Write output image.
     print(f'Write image: {argv[3]}')
-    output.write(argv[3], dtype=oiio.FLOAT)
+    if not output.write(argv[3], dtype=oiio.FLOAT):
+        raise RuntimeError('Failed to save {}: {}'.format(argv[3], oiio.geterror()))
 
 
 if __name__ == '__main__':
