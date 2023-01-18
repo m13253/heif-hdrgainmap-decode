@@ -7,7 +7,7 @@ Convert HDR photos taken by iPhone 12 (or later) to regular HDR images.
 
 First, make sure you have the following packages installed:
 - Python 3.9 or later
-- libheif
+- libheif v1.10 or later
 - NumPy
 - OpenImageIO
 
@@ -28,7 +28,7 @@ brew install python libheif numpy openimageio
 2. Extract the HDR gain map from the photo:
 
    ```bash
-   heif-convert IMG_0000.heic IMG_0000.png
+   heif-convert --with-aux --no-colons IMG_0000.heic IMG_0000.png
    ```
 
    You will receive two files:
@@ -36,13 +36,13 @@ brew install python libheif numpy openimageio
    * `IMG_0000.png`:
      The main image, but we don't need it, because we decode HEIC on our own.
 
-   * `IMG_0000-urn:com:apple:photo:2020:aux:hdrgainmap.png`:
+   * `IMG_0000-urn_com_apple_photo_2020_aux_hdrgainmap.png`:
      This is the HDR gain map.
 
 3. Run the following command to convert the photo to regular HDR image:
 
    ```bash
-   ./heif-hdrgainmap-decode-exr.py IMG_0000.heic IMG_0000-urn:com:apple:photo:2020:aux:hdrgainmap.png IMG_0000.exr
+   ./heif-hdrgainmap-decode-exr.py IMG_0000.heic IMG_0000-urn_com_apple_photo_2020_aux_hdrgainmap.png IMG_0000.exr
    ```
 
 4. Remove the temporary files.
