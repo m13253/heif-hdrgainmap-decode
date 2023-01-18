@@ -42,7 +42,7 @@ brew install python libheif numpy openimageio
 3. Run the following command to convert the photo to regular HDR image:
 
    ```bash
-   ./heif-hdrgainmap-decode-aces.py IMG_0000.heic IMG_0000-urn_com_apple_photo_2020_aux_hdrgainmap.png IMG_0000.exr
+   ./heif-hdrgainmap-decode-scrgb.py IMG_0000.heic IMG_0000-urn_com_apple_photo_2020_aux_hdrgainmap.png IMG_0000.exr
    ```
 
 4. Remove the temporary files.
@@ -51,11 +51,11 @@ brew install python libheif numpy openimageio
    rm -fv IMG_0000.png IMG_0000-*.png
    ```
 
-5. The output is an ACES 2065-1 encoded OpenEXR file.
+5. The output is an scRGB (gamma 1.0) encoded OpenEXR file.
 
    You need to use an HDR tone-mapping software to edit it before sharing.
 
-6. Alternatively, you can use `heif-hdrgainmap-decode-scrgb.py` for scRGB, or
+6. Alternatively, you can use `heif-hdrgainmap-decode-aces.py` for ACES, or
    `heif-hdrgainmap-decode-y4m.py` for BT.2100.
 
 ## Technical details
