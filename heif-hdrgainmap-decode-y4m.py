@@ -121,13 +121,14 @@ def main(argv: typing.List[str]) -> None:
     del gainmap_buf
 
     # Convert Display P3 to CIEXYZ, using Y for luminance.
+    # FIXME: This algorithm is not the standard definition.
     DisplayP3_to_Y = np.array([0.22897456, 0.69173852, 0.07928691], dtype=np.float32)
     output_Y = output_buf.dot(DisplayP3_to_Y)
     output_Y_max = output_Y.max() * reference_white
     output_Y_avg = output_Y.mean() * reference_white
     del output_Y
-    print('MaxFALL: {:.2f} cd/m\xb2'.format(output_Y_avg))
-    print('MaxCLL:  {:.2f} cd/m\xb2'.format(output_Y_max))
+    print('MaxFALL: {:.2f} cd/m\xb2 (estimate)'.format(output_Y_avg))
+    print('MaxCLL:  {:.2f} cd/m\xb2 (estimate)'.format(output_Y_max))
 
     # Convert Display P3 to BT.2020.
     # Computed using https://github.com/m13253/colorspace-routines
