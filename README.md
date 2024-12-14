@@ -3,6 +3,12 @@ heif-hdrgainmap-decode
 
 Convert HDR photos taken by iPhone 12 (or later) to regular HDR images.
 
+**⚠️Deprecated!⚠️**
+
+This project is developed very early when there wasn’t enough documentation. Therefore, the algorithms are known to be incorrect.
+
+Please refer to a more recent project: https://github.com/johncf/apple-hdr-heic
+
 ## Installation
 
 First, make sure you have the following packages installed:
